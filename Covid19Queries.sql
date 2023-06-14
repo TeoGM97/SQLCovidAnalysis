@@ -118,3 +118,54 @@ From PopvsVac
 
 --
 -- TEMP TABLE
+DROP Table if exists #PercentPopulationVaccinated
+Create table #PercentPopulationVaccinated
+(
+	Continent nvarchar(255),
+	Location nvarchar(255),
+	Date datetime,
+	Population numeric,
+	New_vaccinations numeric,
+	RollingPeopleVaccinated numeric
+)
+
+Insert into #PercentPopulationVaccinated
+Select 
+	CONVERT(nvarchar(255),dea.continent), 
+	CONVERT(nvarchar(255),dea.location), 
+	CONVERT(datetime,dea.date), 
+	CONVERT(numeric,dea.population), 
+	CONVERT(numeric,vac.new_vaccinations),
+	SUM(CONVERT(int,vac.new_vaccinations)) OVER (Partition by dea.location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+From Covid19Project..CovidDeaths dea
+Join Covid19Project..CovidVaccinations vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+--Where dea.continent is not null
+--Order by 2,3
+
+
+Select 
+	*, 
+	(RollingPeopleVaccinated/population)*100 as PercentOfVaccinatedPeople
+From 
+	#PercentPopulationVaccinated
+
+
+
+-- Creating view to store data for later visualizations
+
+Create View PercentPopulationVaccinated as
+ Select 
+	dea.continent, 
+	dea.location,
+	vac.new_vaccinations,
+	SUM(CONVERT(int,vac.new_vaccinations)) OVER (Partition by dea.location Order by dea.location, dea.Date) as RollingPeopleVaccinated
+-- , (RollingPeopleVaccinated/population)*100 ==> Can't be unsed because it was just created. Will use CTE
+From Covid19Project..CovidDeaths dea
+Join Covid19Project..CovidVaccinations vac
+	On dea.location = vac.location
+	and dea.date = vac.date
+Where dea.continent is not null
+Order by 2,3
+
